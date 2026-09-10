@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modelo Renta Presunta</title>
+<style>
+:root {
+  --azul: #1B3A5C;
+  --azul2: #2E6DA4;
+  --azul3: #D6E4F0;
+  --verde: #27AE60;
+  --naranja: #E67E22;
+  --gris: #F4F6F9;
+  --gris2: #E0E6EE;
+  --texto: #222;
+  --sombra: 0 2px 12px rgba(0,0,0,.12);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--gris); color: var(--texto); min-height: 100vh; }
+
+header { background: var(--azul); color: #fff; padding: 16px 28px; display: flex; align-items: center; gap: 16px; }
+header h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: .5px; }
+header .badge { background: var(--azul2); font-size: .7rem; padding: 3px 10px; border-radius: 20px; letter-spacing: 1px; }
+
+.container { max-width: 920px; margin: 28px auto; padding: 0 16px; }
+
+.card { background: #fff; border-radius: 10px; box-shadow: var(--sombra); padding: 24px 28px; margin-bottom: 20px; }
+.card h2 { font-size: 1rem; color: var(--azul); margin-bottom: 18px; border-bottom: 2px solid var(--azul3); padding-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+label { display: block; font-size: .82rem; font-weight: 600; color: var(--azul); margin-bottom: 5px; }
+select, input[type=number] {
+  width: 100%; padding: 9px 12px; border: 1.5px solid var(--gris2);
+  border-radius: 6px; font-size: .93rem; color: var(--texto);
+  background: #fff; outline: none; transition: border-color .2s;
+}
+select:focus, input:focus { border-color: var(--azul2); }
+
+button.calcular {
+  width: 100%; padding: 13px; background: var(--azul); color: #fff;
+  border: none; border-radius: 8px; font-size: 1rem; font-weight: 700;
+  cursor: pointer; margin-top: 8px; letter-spacing: .5px;
+  transition: background .2s;
+}
+button.calcular:hover { background: var(--azul2); }
+
+/* Resultado */
+.resultado { display: none; }
+.resultado.visible { display: block; }
+
+.renta-box {
+  background: linear-gradient(135deg, var(--azul) 0%, var(--azul2) 100%);
+  color: #fff; border-radius: 10px; padding: 28px 32px; text-align: center; margin-bottom: 20px;
+}
+.renta-label { font-size: .85rem; opacity: .8; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+.renta-valor { font-size: 2.6rem; font-weight: 800; letter-spacing: -1px; }
+
+.factores-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+.factor-item {
+  background: var(--gris); border-radius: 8px; padding: 14px 16px; text-align: center;
+  border-left: 4px solid var(--azul2);
+}
+.factor-titulo { font-size: .72rem; color: #666; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+.factor-valor  { font-size: 1.4rem; font-weight: 800; color: var(--azul); }
+.factor-sub    { font-size: .75rem; color: #888; margin-top: 2px; }
+
+.tramo-badge {
+  display: inline-block; background: var(--azul3); color: var(--azul);
+  border-radius: 20px; padding: 4px 14px; font-size: .8rem; font-weight: 700;
+}
+
+.auditoria {
+  background: #FFFDE7; border: 1px solid #F9C300; border-radius: 8px;
+  padding: 14px 18px; font-size: .8rem; line-height: 1.7; color: #555;
+}
+.auditoria strong { color: #333; }
+
+.formula-box {
+  background: var(--gris); border-radius: 8px; padding: 14px 18px;
+  font-family: 'Courier New', monospace; font-size: .82rem; color: var(--azul);
+  border-left: 4px solid var(--verde); margin-bottom: 16px; word-break: break-word;
+}
+
+.fuentes { font-size: .75rem; color: #888; margin-top: 14px; line-height: 1.6; }
+.fuentes a { color: var(--azul2); text-decoration: none; }
+.fuentes a:hover { text-decoration: underline; }
+
+.alert-min { background: #FFF3CD; border: 1px solid #FFC107; border-radius: 6px; padding: 10px 14px; font-size: .8rem; color: #856404; margin-top: 10px; display:none; }
+
+footer { text-align: center; padding: 20px; font-size: .75rem; color: #999; }
+footer span { color: var(--azul2); }
+
+@media(max-width:600px) {
+  .grid2, .grid3, .factores-grid { grid-template-columns: 1fr; }
+  .renta-valor { font-size: 2rem; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Estimador de Renta Presunta</h1>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- FORMULARIO -->
+  <div class="card">
+    <h2>📋 Datos del Cliente</h2>
+    <div class="grid2" style="margin-bottom:16px">
+      <div>
+        <label for="profesion">Profesión / Ocupación</label>
+        <select id="profesion">
+          <option value="">— Seleccionar —</option>
+        </select>
+      </div>
+      <div>
+        <label for="edad">Edad (años)</label>
+        <input type="number" id="edad" min="18" max="99" placeholder="Ej: 45">
+      </div>
+    </div>
+    <div class="grid2">
+      <div>
+        <label for="region">Región</label>
+        <select id="region">
+          <option value="">— Seleccionar —</option>
+        </select>
+      </div>
+      <div>
+        <label for="comuna">Comuna</label>
+        <select id="comuna">
+          <option value="">— Primero seleccione región —</option>
+        </select>
+      </div>
+    </div>
+    <button class="calcular" onclick="calcular()">📊 Estimar Renta Presunta</button>
+  </div>
+
+  <!-- RESULTADO -->
+  <div id="resultado" class="resultado">
+
+    <div class="renta-box">
+      <div class="renta-label">Renta Presunta Mensual Estimada</div>
+      <div id="renta-valor" class="renta-valor">$0</div>
+    </div>
+
+    <div class="factores-grid">
+      <div class="factor-item">
+        <div class="factor-titulo">Tramo Etario</div>
+        <div id="f-tramo" class="factor-valor" style="font-size:1.1rem">—</div>
+        <div id="f-percentil" class="factor-sub"></div>
+      </div>
+      <div class="factor-item">
+        <div class="factor-titulo">Factor Regional</div>
+        <div id="f-regional" class="factor-valor">—</div>
+        <div id="f-region-label" class="factor-sub"></div>
+      </div>
+      <div class="factor-item">
+        <div class="factor-titulo">Factor Comunal (m²)</div>
+        <div id="f-m2" class="factor-valor">—</div>
+        <div id="f-m2-label" class="factor-sub"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🔎 Detalle del Cálculo</h2>
+      <div id="formula-display" class="formula-box"></div>
+      <div id="sies-detail" style="font-size:.8rem;color:#555;line-height:1.8;margin-bottom:12px"></div>
+      <div id="alert-min" class="alert-min">⚠️ Resultado por debajo del sueldo mínimo referencial (~$500.000). Validar con analista.</div>
+      <div class="auditoria">
+        <strong>📌 Trazabilidad (Auditoría)</strong><br>
+        <span id="auditoria-texto"></span>
+      </div>
+      <div class="fuentes">
+        <strong>Fuentes:</strong>
+        [F1] <a href="https://estadisticas.mineduc.cl/" target="_blank">SIES/Mineduc — Estadísticas por Carrera</a> ·
+        [F2] <a href="https://www.sii.cl/sobre_el_sii/estadisticas_de_personas_naturales.html" target="_blank">SII — Estadísticas Personas Naturales por Región 2024</a> ·
+        [F3] <a href="https://www.grupocolibri.cl/blog/precio-metro-cuadrado-terrenos-chile" target="_blank">Grupo Colibrí 2026</a> ·
+        [F4] <a href="https://blog.uhomie.cl/guias/cual-es-el-precio-por-metro-cuadrado-chile/" target="_blank">uHomie 2025</a>
+      </div>
+    </div>
+
+  </div><!-- /resultado -->
+
+</div><!-- /container -->
+
+<footer>Uso exclusivo interno</footer>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// DATOS EMBEBIDOS — Fuente: SIES/Mineduc (renta_presunta_app_os.html)
+// ═══════════════════════════════════════════════════════════════════
+const SIES = {
+  "Actuación y Teatro":                   {p50:622411,   p75:888614,   p90:1264100},
+  "Administración de Empresas":           {p50:1106150,  p75:1607610,  p90:2298180},
+  "Administración Pública":               {p50:971720,   p75:1373750,  p90:1916650},
+  "Agronomía":                            {p50:1019860,  p75:1483190,  p90:2085510},
+  "Antropología":                         {p50:783840,   p75:1130730,  p90:1611640},
+  "Artes y Licenciatura en Artes":        {p50:621320,   p75:893650,   p90:1275500},
+  "Auditoría":                            {p50:969250,   p75:1375920,  p90:1930400},
+  "Biología":                             {p50:868170,   p75:1243960,  p90:1764410},
+  "Bioquímica":                           {p50:1201770,  p75:1743640,  p90:2485400},
+  "Ciencia Política":                     {p50:948030,   p75:1356750,  p90:1921690},
+  "Comunicación Audiovisual":             {p50:751220,   p75:1073610,  p90:1518480},
+  "Comunicación Social y Periodismo":     {p50:845540,   p75:1210810,  p90:1714660},
+  "Construcción Civil":                   {p50:1285460,  p75:1870710,  p90:2684100},
+  "Contabilidad":                         {p50:780000,   p75:1120000,  p90:1570000},
+  "Cs. de la Computación e Informática":  {p50:1350890,  p75:1963350,  p90:2820500},
+  "Cs. Matemáticas":                      {p50:1100000,  p75:1600000,  p90:2250000},
+  "Danza":                                {p50:590000,   p75:840000,   p90:1190000},
+  "Decoración de Interiores":             {p50:680000,   p75:970000,   p90:1370000},
+  "Derecho":                              {p50:2057321,  p75:3056880,  p90:4446710},
+  "Diseño":                               {p50:739330,   p75:1061530,  p90:1503090},
+  "Diseño Gráfico":                       {p50:729000,   p75:1050000,  p90:1490000},
+  "Diseño Industrial":                    {p50:770000,   p75:1110000,  p90:1560000},
+  "Economía":                             {p50:1285960,  p75:1890180,  p90:2745870},
+  "Educación Básica":                     {p50:743910,   p75:1038420,  p90:1428270},
+  "Educación Diferencial":                {p50:761620,   p75:1065380,  p90:1469570},
+  "Educación Media - Inglés":             {p50:820000,   p75:1150000,  p90:1590000},
+  "Educación Media - Matemática":         {p50:830000,   p75:1165000,  p90:1610000},
+  "Educación Media - Historia":           {p50:775000,   p75:1085000,  p90:1495000},
+  "Educación Media - Biología y Cs. Nats.":{p50:780000,  p75:1090000,  p90:1500000},
+  "Educación Media - Lenguaje":           {p50:775000,   p75:1085000,  p90:1495000},
+  "Educación Parvularia":                 {p50:691040,   p75:961000,   p90:1317410},
+  "Enfermería":                           {p50:1324780,  p75:1916460,  p90:2741530},
+  "Estadística":                          {p50:1220000,  p75:1780000,  p90:2550000},
+  "Filosofía":                            {p50:770000,   p75:1100000,  p90:1540000},
+  "Fonaudiología":                        {p50:1038780,  p75:1493990,  p90:2117760},
+  "Geografía":                            {p50:870000,   p75:1250000,  p90:1750000},
+  "Geología":                             {p50:1548270,  p75:2252700,  p90:3234000},
+  "Historia":                             {p50:780000,   p75:1110000,  p90:1550000},
+  "Ingeniería Civil":                     {p50:1822240,  p75:2648750,  p90:3794350},
+  "Ingeniería Civil de Minas":            {p50:2145830,  p75:3120000,  p90:4480000},
+  "Ingeniería Civil Eléctrica":           {p50:1854500,  p75:2695000,  p90:3870000},
+  "Ingeniería Civil en Computación e Informática":{p50:1921200,p75:2793000,p90:4011000},
+  "Ingeniería Civil Industrial":          {p50:1905890,  p75:2769810,  p90:3972060},
+  "Ingeniería Civil Mecánica":            {p50:1874200,  p75:2723000,  p90:3908000},
+  "Ingeniería Civil Química":             {p50:1790000,  p75:2600000,  p90:3730000},
+  "Ingeniería Comercial":                 {p50:1718420,  p75:2497490,  p90:3581530},
+  "Ingeniería de Ejecución":              {p50:1250000,  p75:1820000,  p90:2610000},
+  "Ingeniería en Administración":         {p50:1050000,  p75:1530000,  p90:2190000},
+  "Ingeniería en Construcción":           {p50:1285460,  p75:1870710,  p90:2684100},
+  "Ingeniería en Prevención de Riesgos":  {p50:1002300,  p75:1451710,  p90:2075830},
+  "Ingeniería Forestal":                  {p50:1045660,  p75:1519010,  p90:2174530},
+  "Ingeniería Industrial":                {p50:1400000,  p75:2035000,  p90:2920000},
+  "Kinesiología":                         {p50:1097330,  p75:1591640,  p90:2275620},
+  "Letras":                               {p50:770000,   p75:1100000,  p90:1550000},
+  "Matemática":                           {p50:990000,   p75:1430000,  p90:2020000},
+  "Medicina":                             {p50:4121741,  p75:5347170,  p90:6701042},
+  "Medicina Veterinaria":                 {p50:1018260,  p75:1480280,  p90:2121200},
+  "Música, Canto o Danza":               {p50:631000,   p75:900000,   p90:1275000},
+  "Nutrición y Dietética":               {p50:919230,   p75:1323590,  p90:1889330},
+  "Obstetricia y Puericultura":          {p50:1287240,  p75:1866370,  p90:2673380},
+  "Odontología":                          {p50:2016340,  p75:2933470,  p90:4202870},
+  "Administración Pública":              {p50:971720,   p75:1373750,  p90:1916650},
+  "Psicología":                           {p50:1037210,  p75:1502870,  p90:2143450},
+  "Química":                              {p50:1037560,  p75:1510000,  p90:2160000},
+  "Química y Farmacia":                   {p50:1388850,  p75:2018100,  p90:2892620},
+  "Servicio Social":                      {p50:763490,   p75:1082330,  p90:1523600},
+  "Sociología":                           {p50:878430,   p75:1261900,  p90:1791750},
+  "Terapia Ocupacional":                  {p50:932430,   p75:1347810,  p90:1921700},
+  "Trabajo Social":                       {p50:763490,   p75:1082330,  p90:1523600},
+  "Técnico en Administración":            {p50:600000,   p75:860000,   p90:1210000},
+  "Técnico en Computación":              {p50:690000,   p75:990000,   p90:1400000},
+  "Técnico en Construcción":             {p50:760000,   p75:1090000,  p90:1540000},
+  "Técnico en Contabilidad":             {p50:590000,   p75:845000,   p90:1195000},
+  "Técnico en Electricidad":             {p50:750000,   p75:1075000,  p90:1520000},
+  "Técnico en Enfermería":               {p50:580000,   p75:830000,   p90:1175000},
+  "Técnico en Gastronomía":              {p50:550000,   p75:785000,   p90:1110000},
+  "Técnico en Mecánica":                 {p50:700000,   p75:1005000,  p90:1420000},
+  "Técnico en Minería":                  {p50:1100000,  p75:1600000,  p90:2260000},
+  "Técnico en Salud":                    {p50:580000,   p75:830000,   p90:1175000},
+  "Técnico en Turismo":                  {p50:560000,   p75:800000,   p90:1130000},
+  "Turismo":                             {p50:631070,   p75:907110,   p90:1287490},
+};
+
+// ── 106 Profesiones banco → SIES (código → [{carrera, peso}])
+const MAPEO = {
+  1: [{c:"Administración de Empresas",w:.5},{c:"Técnico en Administración",w:.5}],
+  2: [{c:"Técnico en Administración",w:1}],
+  3: [{c:"Derecho",w:1}],
+  4: [{c:"Ingeniería Civil",w:.6},{c:"Diseño Industrial",w:.4}],
+  5: [{c:"Artes y Licenciatura en Artes",w:.4},{c:"Actuación y Teatro",w:.3},{c:"Música, Canto o Danza",w:.3}],
+  6: [{c:"Técnico en Administración",w:1}],
+  7: [{c:"Técnico en Salud",w:1}],
+  8: [{c:"Técnico en Administración",w:1}],
+  9: [{c:"Comunicación Social y Periodismo",w:1}],
+  10:[{c:"Contabilidad",w:1}],
+  11:[{c:"Técnico en Construcción",w:1}],
+  12:[{c:"Construcción Civil",w:1}],
+  13:[{c:"Técnico en Administración",w:.5},{c:"Técnico en Computación",w:.5}],
+  14:[{c:"Derecho",w:1}],
+  15:[{c:"Técnico en Electricidad",w:1}],
+  16:[{c:"Técnico en Administración",w:1}],
+  17:[{c:"Técnico en Enfermería",w:1}],
+  18:[{c:"Educación Básica",w:.5},{c:"Educación Parvularia",w:.5}],
+  19:[{c:"Estadística",w:.5},{c:"Economía",w:.5}],
+  20:[{c:"Economía",w:1}],
+  21:[{c:"Técnico en Administración",w:.5},{c:"Comunicación Social y Periodismo",w:.5}],
+  22:[{c:"Enfermería",w:1}],
+  23:[{c:"Técnico en Gastronomía",w:1}],
+  24:[{c:"Técnico en Administración",w:1}],
+  25:[{c:"Técnico en Administración",w:1}],
+  26:[{c:"Ingeniería Civil Industrial",w:.25},{c:"Ingeniería Civil Mecánica",w:.25},{c:"Ingeniería Civil Eléctrica",w:.25},{c:"Ingeniería Civil en Computación e Informática",w:.25}],
+  27:[{c:"Ingeniería Civil",w:1}],
+  28:[{c:"Cs. de la Computación e Informática",w:.5},{c:"Ingeniería Civil en Computación e Informática",w:.5}],
+  29:[{c:"Ingeniería Industrial",w:1}],
+  30:[{c:"Ingeniería en Administración",w:.5},{c:"Administración de Empresas",w:.5}],
+  31:[{c:"Ingeniería Civil Industrial",w:.25},{c:"Ingeniería Civil Mecánica",w:.25},{c:"Ingeniería Civil Eléctrica",w:.25},{c:"Ingeniería Civil en Computación e Informática",w:.25}],
+  32:[{c:"Cs. de la Computación e Informática",w:1}],
+  33:[{c:"Medicina Veterinaria",w:1}],
+  34:[{c:"Derecho",w:1}],
+  35:[{c:"Kinesiología",w:1}],
+  36:[{c:"Técnico en Construcción",w:.5},{c:"Técnico en Electricidad",w:.5}],
+  37:[{c:"Técnico en Mecánica",w:1}],
+  38:[{c:"Medicina",w:1}],
+  39:[{c:"Técnico en Salud",w:1}],
+  40:[{c:"Ingeniería Civil de Minas",w:.5},{c:"Técnico en Minería",w:.5}],
+  41:[{c:"Técnico en Administración",w:1}],
+  42:[{c:"Música, Canto o Danza",w:1}],
+  43:[{c:"Nutrición y Dietética",w:1}],
+  44:[{c:"Odontología",w:1}],
+  45:[{c:"Administración Pública",w:.5},{c:"Derecho",w:.5}],
+  46:[{c:"Técnico en Administración",w:.6},{c:"Educación Básica",w:.4}],
+  47:[{c:"Psicología",w:1}],
+  48:[{c:"Química y Farmacia",w:1}],
+  49:[{c:"Química",w:1}],
+  50:[{c:"Educación Básica",w:.4},{c:"Educación Media - Matemática",w:.3},{c:"Educación Media - Historia",w:.3}],
+  51:[{c:"Derecho",w:.4},{c:"Ingeniería Comercial",w:.3},{c:"Administración de Empresas",w:.3}],
+  52:[{c:"Ingeniería Civil",w:.5},{c:"Ingeniería en Construcción",w:.5}],
+  53:[{c:"Técnico en Computación",w:1}],
+  54:[{c:"Técnico en Electricidad",w:1}],
+  55:[{c:"Técnico en Mecánica",w:1}],
+  56:[{c:"Técnico en Salud",w:1}],
+  57:[{c:"Terapia Ocupacional",w:1}],
+  58:[{c:"Turismo",w:1}],
+  59:[{c:"Trabajo Social",w:1}],
+  60:[{c:"Medicina Veterinaria",w:.5},{c:"Agronomía",w:.5}],
+  61:[{c:"Técnico en Administración",w:1}],
+  62:[{c:"Técnico en Gastronomía",w:1}],
+  63:[{c:"Diseño Gráfico",w:1}],
+  64:[{c:"Diseño",w:.5},{c:"Comunicación Audiovisual",w:.5}],
+  65:[{c:"Comunicación Audiovisual",w:1}],
+  66:[{c:"Técnico en Administración",w:1}],
+  67:[{c:"Sociología",w:1}],
+  68:[{c:"Filosofía",w:1}],
+  69:[{c:"Antropología",w:1}],
+  70:[{c:"Historia",w:1}],
+  71:[{c:"Geografía",w:1}],
+  72:[{c:"Biología",w:1}],
+  73:[{c:"Geología",w:1}],
+  74:[{c:"Cs. Matemáticas",w:.5},{c:"Matemática",w:.5}],
+  75:[{c:"Cs. Matemáticas",w:1}],
+  76:[{c:"Estadística",w:1}],
+  77:[{c:"Ingeniería en Prevención de Riesgos",w:1}],
+  78:[{c:"Auditoría",w:1}],
+  79:[{c:"Administración Pública",w:1}],
+  80:[{c:"Técnico en Administración",w:1}],
+  81:[{c:"Técnico en Administración",w:1}],
+  82:[{c:"Técnico en Salud",w:1}],
+  83:[{c:"Fonaudiología",w:1}],
+  84:[{c:"Obstetricia y Puericultura",w:1}],
+  85:[{c:"Técnico en Enfermería",w:1}],
+  86:[{c:"Ciencia Política",w:1}],
+  87:[{c:"Servicio Social",w:1}],
+  88:[{c:"Ingeniería Comercial",w:.6},{c:"Economía",w:.4}],
+  89:[{c:"Comunicación Social y Periodismo",w:.5},{c:"Ciencia Política",w:.5}],
+  90:[{c:"Técnico en Computación",w:.5},{c:"Cs. de la Computación e Informática",w:.5}],
+  91:[{c:"Cs. de la Computación e Informática",w:.7},{c:"Ingeniería Civil en Computación e Informática",w:.3}],
+  92:[{c:"Construcción Civil",w:.5},{c:"Ingeniería en Construcción",w:.5}],
+  93:[{c:"Educación Diferencial",w:1}],
+  94:[{c:"Educación Básica",w:1}],
+  95:[{c:"Educación Media - Matemática",w:.2},{c:"Educación Media - Historia",w:.2},{c:"Educación Media - Inglés",w:.2},{c:"Educación Media - Biología y Cs. Nats.",w:.2},{c:"Educación Media - Lenguaje",w:.2}],
+  96:[{c:"Técnico en Gastronomía",w:1}],
+  97:[{c:"Técnico en Turismo",w:1}],
+  98:[{c:"Técnico en Administración",w:1}],
+  99:[{c:"Técnico en Mecánica",w:.5},{c:"Técnico en Electricidad",w:.5}],
+ 100:[{c:"Agronomía",w:1}],
+ 101:[{c:"Ingeniería Forestal",w:1}],
+ 102:[{c:"Obstetricia y Puericultura",w:1}],
+ 103:[{c:"Bioquímica",w:.5},{c:"Química",w:.5}],
+ 104:[{c:"Técnico en Minería",w:.5},{c:"Ingeniería Civil de Minas",w:.5}],
+ 105:[{c:"Técnico en Construcción",w:1}],
+ 106:[{c:"Técnico en Administración",w:1}],
+};
+
+// ── Nombres de profesiones banco
+const PROFESIONES = {
+  1:"ADMINISTRADOR",2:"AGENTE/EJECUTIVO VENTAS",3:"ABOGADO",4:"ARQUITECTO",
+  5:"ARTISTA/ACTOR",6:"AUXILIAR ADMINISTRATIVO",7:"AUXILIAR DE SALUD",
+  8:"CAJERO/OPERADOR",9:"COMUNICADOR/PERIODISTA",10:"CONTADOR/CONTABLE",
+  11:"CONSTRUCTOR CIVIL (TÉCNICO)",12:"CONSTRUCTOR CIVIL",13:"CONSULTOR TI",
+  14:"CORREDOR DE PROPIEDADES",15:"ELECTRICISTA",16:"EMPLEADO OFICINA",
+  17:"ENFERMERA(O) TÉCNICO/TENS",18:"EDUCADORA PÁRVULOS",
+  19:"ESTADÍSTICO/ACTUARIO",20:"ECONOMISTA",21:"EJECUTIVO COMERCIAL",
+  22:"ENFERMERA(O)",23:"GARZÓN/BARTENDER",24:"GUARDIA DE SEGURIDAD",
+  25:"INSPECTOR/SUPERVISOR",26:"INGENIERO (GENÉRICO)",27:"INGENIERO CIVIL",
+  28:"INGENIERO INFORMÁTICO/COMPUTACIÓN",29:"INGENIERO INDUSTRIAL",
+  30:"INGENIERO EN ADMINISTRACIÓN",31:"INGENIERO 5 AÑOS (CARRERA LARGA)",
+  32:"ANALISTA/PROGRAMADOR SISTEMAS",33:"MÉDICO VETERINARIO",
+  34:"JUEZ/FISCAL/NOTARIO",35:"KINESIÓLOGO",36:"MAESTRO/TÉCNICO OFICIO",
+  37:"MECÁNICO",38:"MÉDICO",39:"TÉCNICO EN ENFERMERÍA/PARAMÉDICO",
+  40:"MINERO/TÉCNICO MINERÍA",41:"MENSAJERO/REPARTIDOR",42:"MÚSICO",
+  43:"NUTRICIONISTA",44:"ODONTÓLOGO/DENTISTA",
+  45:"OFICIAL FF.AA./CARABINEROS",46:"OPERARIO/OBRERO",47:"PSICÓLOGO",
+  48:"QUÍMICO FARMACÉUTICO",49:"QUÍMICO",50:"PROFESOR (GENÉRICO)",
+  51:"EJECUTIVO/GERENTE",52:"TÉCNICO EN CONSTRUCCIÓN",
+  53:"TÉCNICO COMPUTACIÓN",54:"TÉCNICO ELECTRICIDAD",
+  55:"TÉCNICO MECÁNICA",56:"TÉCNICO SALUD",57:"TERAPEUTA OCUPACIONAL",
+  58:"TURISMO/HOTELERÍA",59:"TRABAJADOR SOCIAL",
+  60:"VETERINARIO/AGRÓNOMO CAMPO",61:"VENDEDOR",62:"COCINERO/CHEF",
+  63:"DISEÑADOR GRÁFICO",64:"DISEÑADOR",65:"CAMARÓGRAFO/FOTÓGRAFO",
+  66:"ASISTENTE ADMINISTRATIVO",67:"SOCIÓLOGO",68:"FILÓSOFO",
+  69:"ANTROPÓLOGO",70:"HISTORIADOR",71:"GEÓGRAFO",72:"BIÓLOGO",
+  73:"GEÓLOGO",74:"FÍSICO",75:"MATEMÁTICO",76:"ESTADÍSTICO",
+  77:"PREVENCIONISTA RIESGOS",78:"AUDITOR",79:"FUNCIONARIO PÚBLICO",
+  80:"SECRETARIA/O",81:"RECEPCIONISTA",82:"PARAMÉDICO",83:"FONOAUDIÓLOGO",
+  84:"MATRONA/OBSTETRA",85:"TÉCNICO ENFERMERÍA",86:"POLITÓLOGO",
+  87:"ASISTENTE SOCIAL",88:"ECONOMISTA DE EMPRESA",
+  89:"RELACIONADOR PÚBLICO",90:"PROGRAMADOR",91:"ANALISTA SISTEMAS",
+  92:"MAESTRO MAYOR CONSTRUCCIÓN",93:"EDUCADOR DIFERENCIAL",
+  94:"PROFESOR BÁSICA",95:"PROFESOR ENSEÑANZA MEDIA",96:"MOZO/GARZÓN",
+  97:"GUÍA TURÍSTICO",98:"DESPACHADOR/BODEGUERO",99:"TÉCNICO INDUSTRIAL",
+ 100:"AGRÓNOMO",101:"INGENIERO FORESTAL",102:"MATRONA/OBSTETRA II",
+ 103:"BIOQUÍMICO",104:"OPERARIO MINERÍA",105:"ALBAÑIL/MAESTRO",
+ 106:"SIN PROFESIÓN / OTRO"
+};
+
+// ── Factores regionales (SII 2024)
+const F_REGIONAL = {
+  "XV":0.80,"I":0.93,"II":1.27,"III":1.06,"IV":0.93,"V":0.95,
+  "XIII":1.14,"VI":0.85,"VII":0.74,"XVI":0.75,"VIII":0.88,
+  "IX":0.79,"XIV":0.81,"X":0.83,"XI":0.77,"XII":0.85
+}; // Fuente: SII — Estadísticas Personas Naturales por Región, Año Comercial 2024
+const NOMBRES_REGION = {
+  "XV":"Arica y Parinacota","I":"Tarapacá","II":"Antofagasta",
+  "III":"Atacama","IV":"Coquimbo","V":"Valparaíso",
+  "VI":"O'Higgins","VII":"Maule","VIII":"Biobío","IX":"Araucanía",
+  "X":"Los Lagos","XI":"Aysén","XII":"Magallanes","XIII":"Metropolitana",
+  "XIV":"Los Ríos","XVI":"Ñuble"
+};
+
+// ── Comunas por región con precio m²
+const COMUNAS_DATA = {
+"XV":[["ARICA",58],["CAMARONES",35],["GENERAL LAGOS",35],["PUTRE",35]],
+"I":[["IQUIQUE",72],["ALTO HOSPICIO",52],["POZO ALMONTE",48],["CAMIÑA",38],["COLCHANE",38],["HUARA",40],["PICA",45]],
+"II":[["ANTOFAGASTA",78],["MEJILLONES",55],["SIERRA GORDA",55],["TALTAL",45],["CALAMA",68],["OLLAGÜE",40],["SAN PEDRO DE ATACAMA",62],["TOCOPILLA",50],["MARÍA ELENA",48]],
+"III":[["COPIAPÓ",58],["CALDERA",52],["TIERRA AMARILLA",48],["CHAÑARAL",44],["DIEGO DE ALMAGRO",48],["VALLENAR",48],["ALTO DEL CARMEN",38],["FREIRINA",40],["HUASCO",44]],
+"IV":[["LA SERENA",65],["COQUIMBO",60],["ANDACOLLO",40],["LA HIGUERA",38],["PAIGUANO",38],["VICUÑA",42],["ILLAPEL",40],["CANELA",34],["LOS VILOS",42],["SALAMANCA",38],["OVALLE",44],["COMBARBALÁ",36],["MONTE PATRIA",38],["PUNITAQUI",35],["RÍO HURTADO",35]],
+"V":[["VALPARAÍSO",58],["CASABLANCA",44],["CONCÓN",70],["JUAN FERNÁNDEZ",42],["PUCHUNCAVÍ",46],["QUINTERO",48],["VIÑA DEL MAR",72],["LOS ANDES",45],["CALLE LARGA",42],["RINCONADA",40],["SAN ESTEBAN",40],["LA LIGUA",38],["CABILDO",36],["PAPUDO",48],["PETORCA",35],["ZAPALLAR",65],["QUILLOTA",46],["CALERA",42],["HIJUELAS",40],["LA CRUZ",42],["NOGALES",40],["SAN ANTONIO",48],["ALGARROBO",60],["CARTAGENA",50],["EL QUISCO",60],["EL TABO",55],["SANTO DOMINGO",48],["SAN FELIPE",44],["CATEMU",38],["LLAILLAY",40],["PANQUEHUE",38],["PUTAENDO",36],["SANTA MARÍA",38],["QUILPUÉ",55],["LIMACHE",45],["OLMUÉ",44],["VILLA ALEMANA",50]],
+"XIII":[["SANTIAGO",65],["CERRILLOS",48],["CERRO NAVIA",48],["CONCHALÍ",52],["EL BOSQUE",44],["ESTACIÓN CENTRAL",60],["HUECHURABA",65],["INDEPENDENCIA",62],["LA CISTERNA",57],["LA FLORIDA",60],["LA GRANJA",44],["LA PINTANA",39],["LA REINA",75],["LAS CONDES",87],["LO BARNECHEA",80],["LO ESPEJO",42],["LO PRADO",48],["MACUL",63],["MAIPÚ",48],["ÑUÑOA",70],["PEDRO AGUIRRE CERDA",47],["PEÑALOLÉN",63],["PROVIDENCIA",80],["PUDAHUEL",45],["QUILICURA",45],["QUINTA NORMAL",55],["RECOLETA",58],["RENCA",46],["SAN JOAQUÍN",50],["SAN MIGUEL",62],["SAN RAMÓN",42],["VITACURA",95],["PUENTE ALTO",48],["PIRQUE",50],["SAN JOSÉ DE MAIPO",45],["COLINA",47],["LAMPA",40],["TIL TIL",34],["SAN BERNARDO",44],["BUIN",40],["CALERA DE TANGO",52],["PAINE",38],["MELIPILLA",37],["ALHUÉ",33],["CURACAVÍ",40],["MARÍA PINTO",36],["SAN PEDRO",36],["TALAGANTE",38],["EL MONTE",38],["ISLA DE MAIPO",37],["PADRE HURTADO",45],["PEÑAFLOR",41]],
+"VI":[["RANCAGUA",52],["CODEGUA",40],["COINCO",38],["COLTAUCO",38],["DOÑIHUE",38],["GRANEROS",46],["LAS CABRAS",38],["MACHALÍ",55],["MALLOA",37],["MOSTAZAL",46],["OLIVAR",40],["PEUMO",40],["PICHIDEGUA",37],["QUINTA DE TILCOCO",36],["RENGO",42],["REQUÍNOA",40],["SAN VICENTE",40],["PICHILEMU",52],["LA ESTRELLA",35],["LITUECHE",35],["MARCHIGÜE",35],["NAVIDAD",35],["PAREDONES",35],["SAN FERNANDO",45],["CHÉPICA",38],["CHIMBARONGO",40],["LOLOL",36],["NANCAGUA",38],["PALMILLA",38],["PERALILLO",36],["PLACILLA",38],["PUMANQUE",35],["SANTA CRUZ",44]],
+"VII":[["TALCA",48],["CONSTITUCIÓN",40],["CUREPTO",36],["EMPEDRADO",34],["MAULE",42],["PELARCO",36],["PENCAHUE",36],["RÍO CLARO",36],["SAN CLEMENTE",38],["SAN RAFAEL",36],["CAUQUENES",36],["CHANCO",35],["PELLUHUE",38],["CURICÓ",44],["HUALAÑÉ",36],["LICANTÉN",36],["MOLINA",40],["RAUCO",38],["ROMERAL",38],["SAGRADA FAMILIA",35],["TENO",38],["VICHUQUÉN",36],["LINARES",40],["COLBÚN",38],["LONGAVÍ",36],["PARRAL",38],["RETIRO",36],["SAN JAVIER",40],["VILLA ALEGRE",38],["YERBAS BUENAS",36]],
+"XVI":[["CHILLÁN",44],["BULNES",36],["CHILLÁN VIEJO",42],["EL CARMEN",36],["PEMUCO",34],["PINTO",35],["QUILLÓN",34],["SAN IGNACIO",34],["YUNGAY",36],["QUIRIHUE",36],["COBQUECURA",34],["COELEMU",36],["NINHUE",34],["PORTEZUELO",34],["RÁNQUIL",34],["TREGUACO",34],["SAN CARLOS",38],["COIHUECO",36],["ÑIQUÉN",34],["SAN FABIÁN",34],["SAN NICOLÁS",34]],
+"VIII":[["CONCEPCIÓN",58],["CORONEL",46],["CHIGUAYANTE",52],["FLORIDA",38],["HUALQUI",44],["LOTA",40],["PENCO",48],["SAN PEDRO DE LA PAZ",60],["SANTA JUANA",38],["TALCAHUANO",52],["TOMÉ",44],["HUALPÉN",50],["LEBU",36],["ARAUCO",38],["CAÑETE",36],["CONTULMO",34],["CURANILAHUE",36],["LOS ÁLAMOS",36],["TIRÚA",34],["LOS ÁNGELES",46],["ANTUCO",34],["CABRERO",40],["LAJA",38],["MULCHÉN",38],["NACIMIENTO",38],["NEGRETE",36],["QUILACO",34],["QUILLECO",34],["SAN ROSENDO",36],["SANTA BÁRBARA",36],["TUCAPEL",34],["YUMBEL",36],["ALTO BIOBÍO",34]],
+"IX":[["TEMUCO",52],["CARAHUE",36],["CUNCO",36],["CURARREHUE",34],["FREIRE",36],["GALVARINO",34],["GORBEA",36],["LAUTARO",38],["LONCOCHE",36],["MELIPEUCO",34],["NUEVA IMPERIAL",36],["PADRE LAS CASAS",46],["PERQUENCO",34],["PITRUFQUÉN",38],["PUCÓN",65],["SAAVEDRA",34],["TEODORO SCHMIDT",34],["TOLTÉN",34],["VILCÚN",36],["VILLARRICA",52],["CHOLCHOL",34],["ANGOL",40],["COLLIPULLI",36],["CURACAUTÍN",36],["ERCILLA",34],["LONQUIMAY",34],["LOS SAUCES",34],["LUMACO",34],["PURÉN",34],["RENAICO",36],["TRAIGUÉN",36],["VICTORIA",38]],
+"XIV":[["VALDIVIA",54],["CORRAL",36],["FUTRONO",38],["LA UNIÓN",40],["LAGO RANCO",38],["LANCO",36],["LOS LAGOS",38],["MÁFIL",36],["MARIQUINA",36],["PAILLACO",36],["PANGUIPULLI",40],["RÍO BUENO",38]],
+"X":[["PUERTO MONTT",56],["CALBUCO",42],["COCHAMÓ",35],["FRESIA",35],["FRUTILLAR",50],["LOS MUERMOS",38],["LLANQUIHUE",46],["MAULLÍN",36],["PUERTO VARAS",65],["CASTRO",52],["ANCUD",48],["CHONCHI",38],["CURACO DE VÉLEZ",40],["DALCAHUE",40],["PUQUELDÓN",35],["QUEILÉN",35],["QUELLÓN",38],["QUEMCHI",35],["QUINCHAO",38],["OSORNO",50],["PUERTO OCTAY",42],["PURRANQUE",38],["PUYEHUE",42],["RÍO NEGRO",36],["SAN JUAN DE LA COSTA",35],["SAN PABLO",36],["CHAITÉN",35],["FUTALEUFÚ",36],["HUALAIHUÉ",35],["PALENA",35]],
+"XI":[["COYHAIQUE",58],["LAGO VERDE",35],["AYSÉN",48],["CISNES",38],["GUAITECAS",35],["COCHRANE",45],["O'HIGGINS",35],["TORTEL",35],["CHILE CHICO",42],["RÍO IBÁÑEZ",38]],
+"XII":[["PUNTA ARENAS",65],["LAGUNA BLANCA",38],["RÍO VERDE",35],["SAN GREGORIO",35],["CABO DE HORNOS",45],["ANTÁRTICA",35],["PORVENIR",48],["PRIMAVERA",35],["TIMAUKEL",35],["NATALES",55],["TORRES DEL PAINE",45]]
+};
+
+const MEDIANA_NAC = 55.0;
+const Z_SCORES = {P10:-1.2816,P25:-0.6745,P40:-0.2533,P50:0,P70:0.5244,P75:0.6745,P90:1.2816};
+const TRAMO_PERCENTIL = {"18-24":"P25","25-34":"P50","35-44":"P70","45-54":"P90","55-64":"P75","65+":"P40"};
+
+// ── Inicialización UI ────────────────────────────────────────────────
+window.onload = () => {
+  const selProf = document.getElementById('profesion');
+  Object.entries(PROFESIONES).sort((a,b)=>a[1].localeCompare(b[1])).forEach(([cod,nom])=>{
+    const o = document.createElement('option');
+    o.value = cod; o.textContent = `${nom}`;
+    selProf.appendChild(o);
+  });
+
+  const selReg = document.getElementById('region');
+  const regsOrden = [["XV","Arica y Parinacota"],["I","Tarapacá"],["II","Antofagasta"],
+    ["III","Atacama"],["IV","Coquimbo"],["V","Valparaíso"],["XIII","Metropolitana"],
+    ["VI","O'Higgins"],["VII","Maule"],["XVI","Ñuble"],["VIII","Biobío"],
+    ["IX","Araucanía"],["XIV","Los Ríos"],["X","Los Lagos"],["XI","Aysén"],["XII","Magallanes"]];
+  regsOrden.forEach(([cod,nom])=>{
+    const o = document.createElement('option');
+    o.value = cod; o.textContent = `(${cod}) ${nom}`;
+    selReg.appendChild(o);
+  });
+
+  selReg.addEventListener('change', () => {
+    const selCom = document.getElementById('comuna');
+    selCom.innerHTML = '<option value="">— Seleccionar —</option>';
+    const reg = selReg.value;
+    if (!reg || !COMUNAS_DATA[reg]) return;
+    COMUNAS_DATA[reg].sort((a,b)=>a[0].localeCompare(b[0])).forEach(([nombre, precio])=>{
+      const o = document.createElement('option');
+      o.value = nombre; o.dataset.precio = precio;
+      o.textContent = nombre;
+      selCom.appendChild(o);
+    });
+  });
+};
+
+// ── Lógica de cálculo ────────────────────────────────────────────────
+function interpolarPercentil(p50, p75, p90, percentil) {
+  if (p50 <= 0) return 0;
+  const mu = Math.log(p50);
+  let sigma = 0.30;
+  if (p75 > p50) {
+    const s1 = Math.log(p75/p50) / Z_SCORES['P75'];
+    const s2 = (p90 > p50) ? Math.log(p90/p50) / Z_SCORES['P90'] : s1;
+    sigma = (s1 + s2) / 2;
+  }
+  return Math.exp(mu + Z_SCORES[percentil] * sigma);
+}
+
+function getTramoEdad(edad) {
+  if (edad < 25) return "18-24";
+  if (edad < 35) return "25-34";
+  if (edad < 45) return "35-44";
+  if (edad < 55) return "45-54";
+  if (edad < 65) return "55-64";
+  return "65+";
+}
+
+function formatCLP(n) {
+  return '$' + Math.round(n).toLocaleString('es-CL');
+}
+// Formatea decimales con coma (estándar Chile)
+function fmt(n, decimales = 3) {
+  return n.toLocaleString('es-CL', {
+    minimumFractionDigits: decimales,
+    maximumFractionDigits: decimales
+  });
+}
+
+function calcular() {
+  const codProf = parseInt(document.getElementById('profesion').value);
+  const edad    = parseInt(document.getElementById('edad').value);
+  const region  = document.getElementById('region').value;
+  const comunaEl = document.getElementById('comuna');
+  const comuna  = comunaEl.value;
+  const precioM2 = parseFloat(comunaEl.selectedOptions[0]?.dataset?.precio || 55);
+
+  if (!codProf || !edad || !region || !comuna) {
+    alert('Por favor complete todos los campos'); return;
+  }
+  if (edad < 18 || edad > 99) { alert('Edad debe estar entre 18 y 99 años'); return; }
+
+  const tramo     = getTramoEdad(edad);
+  const percentil = TRAMO_PERCENTIL[tramo];
+  const mapeo     = MAPEO[codProf] || [{c:"Técnico en Administración",w:1}];
+  const fRegional = F_REGIONAL[region] || 1.0;
+  const fM2       = Math.max(0.70, Math.min(1.35, precioM2 / MEDIANA_NAC));
+
+  let rentaBase = 0;
+  const detalles = [];
+
+  mapeo.forEach(({c, w}) => {
+    const d = SIES[c];
+    if (!d) { detalles.push(`⚠️ ${c}: sin datos`); return; }
+    const val = interpolarPercentil(d.p50, d.p75, d.p90, percentil);
+    rentaBase += val * w;
+    detalles.push(`${c} (w=${Math.round(w*100)}%): ${formatCLP(val)}`);
+  });
+
+  const rentaFinal = rentaBase * fRegional * fM2;
+
+  // Mostrar resultado
+  document.getElementById('renta-valor').textContent = formatCLP(rentaFinal);
+
+  document.getElementById('f-tramo').textContent     = tramo;
+  document.getElementById('f-percentil').textContent = `Percentil SIES: ${percentil}`;
+  document.getElementById('f-regional').textContent  = fmt(fRegional, 3);
+  document.getElementById('f-region-label').textContent = `${NOMBRES_REGION[region] || region} (SII 2024)`;
+  document.getElementById('f-m2').textContent        = fmt(fM2, 3);
+  document.getElementById('f-m2-label').textContent  = `${comuna} · ${precioM2} UF/m²`;
+
+  const formula = `renta = ${formatCLP(rentaBase)} [${percentil} SIES] × ${fmt(fRegional,3)} [F.Regional] × ${fmt(fM2,3)} [F.m²] = ${formatCLP(rentaFinal)}`;
+  document.getElementById('formula-display').textContent = formula;
+
+  document.getElementById('sies-detail').innerHTML =
+    '<strong>Carreras SIES usadas:</strong><br>' + detalles.join('<br>');
+
+  const alertMin = document.getElementById('alert-min');
+  alertMin.style.display = rentaFinal < 500000 ? 'block' : 'none';
+
+  document.getElementById('auditoria-texto').innerHTML =
+    `<strong>Profesión:</strong> [${codProf}] ${PROFESIONES[codProf]} → ` +
+    `Carreras SIES: ${mapeo.map(x=>x.c).join(', ')}<br>` +
+    `<strong>Edad:</strong> ${edad} → Tramo ${tramo} → ${percentil} de distribución SIES<br>` +
+    `<strong>Región:</strong> ${region} (${NOMBRES_REGION[region]}) → F.Regional = ${fmt(fRegional,3)} [F2-SII2024]<br>` +
+    `<strong>Comuna:</strong> ${comuna} → UF/m² = ${precioM2} → F.m² = ${fmt(fM2,4)} [F3/F4]<br>` +
+    `<strong>Fórmula:</strong> renta = Percentil_SIES × F_Regional × F_m²<br>` +
+    `<strong>Resultado:</strong> ${formatCLP(rentaFinal)} CLP/mes`;
+
+  const res = document.getElementById('resultado');
+  res.classList.add('visible');
+  res.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+</script>
+</body>
+</html>
